@@ -1,8 +1,5 @@
 Configure miss: x86_64-generic-linux-gnu-ldd
-Configure miss: SSL_set0_rbio
-Configure miss: OPENSSL_init_crypto
-Configure miss: TLS_method
-Configure miss: net/if.h and libnl3/netlink/route/link.h namespace collision
+Configure miss: clock_gettime() requires -lrt
 Configure miss: whether RTAX_FASTOPEN_NO_COOKIE is declared
 Configure miss: whether FRA_PROTOCOL is declared
 Configure miss: whether FRA_IP_PROTO is declared
