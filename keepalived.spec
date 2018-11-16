@@ -4,7 +4,7 @@
 #
 Name     : keepalived
 Version  : 2.0.10
-Release  : 4
+Release  : 5
 URL      : http://www.keepalived.org/software/keepalived-2.0.10.tar.gz
 Source0  : http://www.keepalived.org/software/keepalived-2.0.10.tar.gz
 Summary  : No detailed summary available
