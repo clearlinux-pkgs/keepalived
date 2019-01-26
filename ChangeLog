@@ -1,3 +1,277 @@
+2019-01-26 Alexandre Cassen <acassen@keepalived.org>
+	* keepalived-2.0.12
+	* Documentation related.
+	  Remove keepalived.conf.SYNOPSIS content to make a pointer to manpage.
+	  Update README manifest to reflect actual Keepalived goal and features.
+	* Improve error message if process events connector not enabled in
+	  kernel.
+	* Add option to disable track-process functionality
+	  Issue #1099 reported that their kernel did not support the proc events
+	  connector, and it would therefore be helpful to have an option to build
+	  keepalived without the track-process functionality.
+	  This commit adds the --disable-track-process configure option.
+	* Fix vrrp instances going to fault state when have virtual routes
+	  If an interface going down caused a vrrp instance to go to fault
+	  state, and the vrrp instance also had virtual routes, the state
+	  of the vrrp instance would be set to backup when the deletion of
+	  the virtual route was detected. This commit ensures that the vrrp
+	  instance stays in fault state until the interface is brought up
+	  again.
+	* Remove Red Hat Linux 9 and RH Enterprise Linux 3 from spec file.
+	  Red Hat Linux 9 and Red Hat Enterprise Linux 3 are both based on
+	  Linux 2.4, which is no longer supported by keepalived. The options
+	  in the spec file for Reh Hat Linux 9 have twice caused people to
+	  specify wrong options to configure when trying to build keepalived,
+	  so the options are removed to i) avoid confusion and ii) they are
+	  not longer relevant.
+	* Add global option vrrp_min_garp.
+	  By default keepalived sends 5 gratuitous ARP/NA messages after
+	  transitioning to master, and 5 more 5 seconds later. This isn't
+	  necessary with modern switches, and so if the vrrp_min_garp option
+	  is set, only one gratuitious ARP/NA message is sent after transition
+	  to master, and no repeat messages are sent 4 seconds later.
+	* Standardise definition of _INCLUDE_UNUSED_CODE_
+	* Remove out of date comment re VRRP over IPv6.
+	* Correct typo in keepalived.conf.5.
+	* Directly use structure sizes for packet header lengths.
+	* vrrp_state_fault_rx() is not used.
+	  Wrap the function in conditional compilation so it is not compiled
+	* Convert so list loops to use LIST_FOREACH.
+	* Don't recalculate vrrp packet header address.
+	  vrrp_get_header() calculates the address of the vrrp header in a
+	  received packet, but it was being recalculated in vrrp_in_chk().
+	  This commit passes the already calculated address to vrrp_in_chk().
+	* Ensure a received packet has an AH header if and only if AH auth.
+	  Ensure that a received packet has an AH header if we expect AH
+	  authentication, and doesn't have an AH header if we don't expect
+	  AH authentication.
+	* Ensure all protocol headers received before return pointer to vrrp header
+	  vrrp_get_header() returns a pointer to the vrrp header, but it now returns
+	  NULL if insufficient data has been received to include all the (IP,
+	  possibly AH, and VRRP) headers (this does not include the VIPs in the VRRP
+	  packet).
+	  This means that when a pointer to the VRRP header is returned, all fields in
+	  all protocol headers can safely be accessed.
+	* Add check of received IPv6 hop count in multicast adverts
+	  The VRRP RFC requires that IPv6 hop count MUST be checked to be 255,
+	  just as the TTL for IPv6 must be 255. Previously that wasn't being
+	  checked, since IPv6 raw sockets don't provide access to the IPv6
+	  header.
+	  Using recvmsg() rather than recvfrom(), and setting socket option
+	  IPV6_RECVHOPLIMIT allows keepalived to receive the hop count as
+	  ancillary data, and that can now be checked.
+	* Improve reading from vrrp receive sockets.
+	  Previously no check was made of the return value from recvfrom()/
+	  recvmsg(). This meant than an error could occur (e.g. EINTR), or no
+	  data might be returned, and keepalived would still attempt to process
+	  the receive buffer as though data had been received.
+	* Enhance and streamline checking of validity of received VRRP packet
+	  This includes checking that a packet is multicast, unless unicast is
+	  expected in which case it is checked for unicast, ensuring that if
+	  AH authentication is used, the next header protocol is VRRP.
+	  The sequence of some checks is revised to ensure that the fields being
+	  checked are valid to be accessed prior to accessing them, e.g. check
+	  that the packet is VRRP version 2 before checking the authentication.
+	* Stop clearing receive buffer before receiving VRRP packets.
+	  This is no longer necessary now that the appropriate checks are
+	  made of the return status of recvmsg(), and also that the checks
+	  of received packet length and packet headers now do all necessary
+	  checks.
+	* Add compile time checks for IPV6_RECVHOPLIMIT/IPV6_RECVPKTINFO
+	  support.
+	* Update keepalived.spec.in build-requires.
+	  The kernel package required for building keepalived is kernel-headers
+	  not kernel-devel. Also, it is superfluous to have package kernel in
+	  the build-requires!
+	* Add missing file (build.setup) to tarball.
+	* Fix calculating print format to rlim_t in configure.ac.
+	* Fix compiler warnings on 32 bit systems re HASH_UPDATE.
+	  Removing all the casts stopped the warnings.
+	* Use PRI_rlim_t when printing rlim_t types.
+	* Use %zd/%zu for ssize_t/size_t to avoid warnings on 32 bit systems.
+	* Fix some space/tab formatting.
+	* Stop declaring some timer definitions unsigned to stop compiler
+	  warnings.
+	  TIMER_HZ, TIMER_CENTI_HZ, NSEC_PER_SEC were causing some compiler warnings
+	  on some systems due to being defined with a 'U' unsigned suffix. Removing
+	  the unsigned specifier stopped the compiler warnings.
+	* Fix compiler warning due to incorrect format specifier.
+	  An int64_t should use % PRIi64 and not %ld
+	* Stop an uninitialized variable compiler warning.
+	* Fix MEM_CHECK debugging on processors without unaligned memory
+	  access.
+	* Don't attempt to use unopened socket for getting ipset version.
+	* Tidy up an error message.
+	* vrrp: make vrrp_dispatcher_read() async while catching error.
+	  During investigations we decided to update previous patch to resubmit
+	  into I/O MUX on read error. It will make read procedure I/O MUX freindly
+	  by removing potential sync operation potentially leading to a global
+	  I/O MUX desync. We aggreed, the situation is really and very exceptionnal
+	  but could happen.
+	* vrrp: vrrp_arp_thread split.
+	  Split the function for maintainability purpose.
+
+2019-01-06 Alexandre Cassen <acassen@keepalived.org>
+	* keepalived-2.0.11
+	* Fix segfault while shutting down when SNMP activity occurs.
+	  Issue #1061 identified that keepalived could segfault when it
+	  shut down. It appears that this was caused by data being received
+	  on the file descriptors that the snmp agent requests keepalived
+	  to monitor with epoll(). Since the read threads weren't being
+	  processed during a shutdown, the first time an snmp fd was ready,
+	  keepalived discarded the read thread. The second time that fd became
+	  ready there was no thread to handle the fd, and, since the assert()
+	  statement was not compiled in, non existant data was queued to the
+	  thread ready queue.
+	  This commit changes the assert() calls to continue, so that non existant
+	  data is no longer queued to the thread ready queue.
+	* While shutting down, continue to handle snmp agent fds.
+	  Since we don't shutdown the snmp connection until the very end of
+	  the shutdown process (we need to be able to send snmp traps), we
+	  should continue to handle the snmp fds on behalf of the snmp agent
+	  while shutting down.
+	* Ensure snmp agent is in correct state when initialising/closing
+	  Make sure the snmp agent is not already initialised before
+	  initialising it, and make sure it has been initialised before
+	  closing it.
+	* Disable asserts in bfd code by default and add --enable-asserts
+	  Asserts were enabled by default in the bfd code, which shouldn't be
+	  the case.
+	  Add --enable-asserts configure option so that the asserts tests can
+	  be enabled while debugging.
+	* Remove debugging log message accidently left in.
+	* Update receive buffers when interface is created.
+	  The receive buffer size used by keepalived is based on the largest
+	  MTU of any interface that keepalived uses. If dynamic interfaces
+	  are being used and an interface is created after keepalived has
+	  started, the MTU of the new interface may be larger than the
+	  previous largest, so the receive buffer may need to be increased
+	  in size.
+	  Further, if vrrp_rx_bufs_policy is MTU, then the kernel receive
+	  buffers on the receive socket may need to be increased.
+	* Handle MTU sizes being changed.
+	  Issue #1068 identified that the MTU size wasn't being updated in
+	  keepalived if it changed.
+	  This commit now updates the MTU size and adjusts receive buffer
+	  sizes accordingly.
+	* Fix syntax error in configure.ac.
+	* Fix double free when global data smtp_helo_name copied from local_name
+	  Issue #1071 identified a double free fault. It occurred when smtp_helo_name
+	  was not set, in which case it was set to point to the same malloc'd memory
+	  as local_name. At termination keepalived freed both local_name and
+	  smtp_helo_name.
+	  If keepalived needs to use local_name for smtp_helo_name it now malloc's
+	  additional memory to copy the string into.
+	* Rename TIMER_MAX to TIMER_MAXIMUM.
+	  ulibC defines TIMER_MAX, so to avoid naming conflict rename it.
+	  This issue was reported by Paul Gildea <gildeap@tcd.ie> who also
+	  provided the patch.
+	* Fix segfault when smtp alerts configured.
+	* First working version of nftables.
+	* Restructed code around how iptables/nftables are called
+	  This commit also allows building keepalived without iptables
+	  support, thereby allowing only nftables support.
+	  Adding any other mechanism to handle no_accept mode, i.e. blocking
+	  receiving and sending to/from VIPs should be added to vrrp_firewall.c,
+	  in a similar way to how nftables/iptables are used.
+	* Update doc files re nftables.
+	* Make nftables handle dont_track_primary appropriately.
+	* Fix config reload with nftables.
+	* Set base chain priorities from configuration.
+	* Use iptables by default if neither iptables or nftables configured.
+	  But if the build of keepalived does not include iptables, then use
+	  nftables default.
+	* Stop dumping keywords - left turned on after debugging.
+	* Make umask configuration apply to created file.
+	* Add libmnl and libnftnl to travis file.
+	* Fix compilation failure when NFTNL_EXPR_LOOKUP_FLAGS not defined.
+	* Fix compilation failure when build with nftables but without iptables.
+	* Fix order of include files in configure COLLISION test.
+	  Since Linux 4.4.11 (commit 1575c09) including linux/if.h after
+	  net/if.h works, whereas until glibc fix their headers including
+	  net/if.h after linux/if.h causes compiler redefinition errors.
+	  Unfortunately the test for the collision was done the wrong way
+	  round, as identified in issue #1079. The patch included in the
+	  issue report corrects the order of inclusion of the header files.
+	  What we should do is ensure that glibc header files are included
+	  before Linux header files, so that at least if kernel headers from
+	  4.4.11 onwards are used, the conflict will not occur.
+	* Set CLOEXEC on netlink sockets.
+	* Correct error message for invalid route metric.
+	* Add track_process for vrrp to monitor if another process is running.
+	  Configurations frequently include a track_script to check that a process
+	  is running, often haproxy or nginx. Using any of pgrep, pkill, killall,
+	  pidof, etc, has an overhead of reading all /proc/[1-9]*/status and/or
+	  /proc/[1-9]*/cmdline files. In particular reading the cmdline files
+	  has a significant overhead on a system that is swapping, since the
+	  cmdline files provide access to part of the address space of each
+	  process, which may need to be fetched from the swap space.
+	  This commit reads the /proc/[1-9]*/stat and/or the /proc/[1-9]*/cmdline
+	  files only when keepalived starts, and after that uses the process events
+	  connector to track process creation and termination.
+	  keepalived will ignore zombie processes, whereas pgrep etc include them.
+	  A minimum number of instances of a process can be specified, and also a
+	  delay so that if a process is restarted, it won't cause monitoring vrrp
+	  instances to immediately transition to fault state but to wait the
+	  configured time and it the monitored process starts again it
+	  won't transition to fault state.
+	  There are potential difficulties with the process event connector if a
+	  large number of process events occur very rapidly, since there can be
+	  a receive buffer overrun on the netlink socket. This code will detect
+	  that happening, increase the receive buffer size, and reread the processes
+	  from /proc.
+	* Add missing #include to track_process.c.
+	* Fix number of elements of fd_set read for snmp select info.
+	* Remove thread_event_t when EPOLL_CTL_DEL fails.
+	  If snmpd closes a file descriptor, when keepalived attempts to
+	  unregister the fd from epoll an error is returned. However, we still
+	  need to remove the thread_event_t from the io_events rbtree.
+	* Fix connection to snmpd after it has to reconnect.
+	  Issue #1080 identified that keepalived wasn't handling a connection
+	  failure and reconnect to snmpd properly. The problem was created when
+	  the change from select() to epoll() was made.
+	  This commit makes keepalived unregister and reregister the snmp file
+	  descriptors after snmpd reconnects.
+	* Fix retry count for SMTP_CHECK checker.
+	  The checker was doing one too few retries.
+	* Make healthchecker failure reporting consistent
+	  Some healthcheckers were reporting all failures, and others only when
+	  the retries expired. This commit by default makes the checkers only
+	  report failure when the retries expire, unless the global keyword
+	  checker_log_all_failures or log_all_failures on the specific checker
+	  is configured.
+	* After reload, reinitialise current track processes state.
+	* Remove unused variable in track_process.c.
+	* Add configure checks re --with-kernel-dir.
+	* Convert remaining select() to epoll_wait().
+	  keepalived was using select() for handling the termination of child
+	  processes, but the main scheduling loop now uses epoll_wait(), so
+	  convert the select() to epoll_wait() from consistency.
+	* Stop keepalived leaving zombie child processes.
+	  keepalived wasn't reaping the termination of its child processes,
+	  so this commit adds waitpid() calls once it knows the processes
+	  have terminated.
+	* Fix make distclean and make distcheck.
+	* Also skip route not configured with down interface.
+	  Otherwise, if keepalived has virtual_routes configured, we create
+	  a virtual interface and bring it up and down, current code will bring
+	  VRRP state to FAULT and never return.
+	* Stop vrrp process entering infinite loop when track script times out
+	  Issue #1093 identified that the vrrp process was entering an infinite
+	  loop after a track script timed out. This was due to a child process
+	  thread having an RB tree for PIDs as well as for the timeout, and if
+	  a child process timed out, the thread wasn't being removed from the
+	  PID RB tree. This commit now ensures it is removed.
+	* Fix the abbreviation of Shortest Expected Delay.
+	* Don't free unallocated memory if not tracking processes.
+	* vrrp: Rewrote JSON code
+	  Remove dependency to json-c extralib by using a simple streaming JSON writter.
+	  Refactored code to make it simple to maintain.
+	* vrrp: Fix JSON handling for v{route;rule}.
+	* autoconf: fix nftables selection
+	  We need to inhibit nftable compilation if compiling system has
+	  kernel header file nf_tables.h but not libnftnl nor libmnl.
+
 2018-11-12 Alexandre Cassen <acassen@keepalived.org>
 	* keepalived-2.0.10
 	* Fix compiling on Alpine Linux.
