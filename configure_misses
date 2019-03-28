@@ -1,6 +1,5 @@
 Configure miss: x86_64-generic-linux-gnu-ldd
 Configure miss: clock_gettime() requires -lrt
-Configure miss: nl_socket_modify_cb in -lnl
 Configure miss: xtables.h usability
 Configure miss: xtables.h presence
 Configure miss: xtables.h
