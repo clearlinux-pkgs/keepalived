@@ -1,7 +1,5 @@
-2.0.19
+2.0.20
+file-dev
 glibc-bin
 libnl-dev
 openssl-dev
-pkgconfig(systemd)
-systemd-dev
-util-linux
