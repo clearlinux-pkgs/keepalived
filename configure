@@ -1,0 +1,2 @@
+--with-init=systemd
+--with-systemdsystemunitdir=/usr/lib/systemd/system

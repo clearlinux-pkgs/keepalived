@@ -4,7 +4,7 @@
 #
 Name     : keepalived
 Version  : 2.0.20
-Release  : 13
+Release  : 14
 URL      : http://www.keepalived.org/software/keepalived-2.0.20.tar.gz
 Source0  : http://www.keepalived.org/software/keepalived-2.0.20.tar.gz
 Summary  : No detailed summary available
@@ -13,10 +13,14 @@ License  : GPL-2.0
 Requires: keepalived-bin = %{version}-%{release}
 Requires: keepalived-license = %{version}-%{release}
 Requires: keepalived-man = %{version}-%{release}
+Requires: keepalived-services = %{version}-%{release}
+BuildRequires : dbus-dev
 BuildRequires : file-dev
 BuildRequires : glibc-bin
 BuildRequires : grep
+BuildRequires : ipset-dev
 BuildRequires : libnl-dev
+BuildRequires : nftables-dev
 BuildRequires : openssl-dev
 BuildRequires : pkgconfig(libnfnetlink)
 BuildRequires : sed
@@ -33,6 +37,7 @@ pool states. Keepalived can be sumarize as a LVS driving daemon.
 Summary: bin components for the keepalived package.
 Group: Binaries
 Requires: keepalived-license = %{version}-%{release}
+Requires: keepalived-services = %{version}-%{release}
 
 %description bin
 bin components for the keepalived package.
@@ -63,6 +68,14 @@ Group: Default
 man components for the keepalived package.
 
 
+%package services
+Summary: services components for the keepalived package.
+Group: Systemd services
+
+%description services
+services components for the keepalived package.
+
+
 %prep
 %setup -q -n keepalived-2.0.20
 cd %{_builddir}/keepalived-2.0.20
@@ -72,13 +85,14 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1579731225
+export SOURCE_DATE_EPOCH=1644104196
 export GCC_IGNORE_WERROR=1
 export CFLAGS="$CFLAGS -fno-lto "
-export FCFLAGS="$CFLAGS -fno-lto "
-export FFLAGS="$CFLAGS -fno-lto "
+export FCFLAGS="$FFLAGS -fno-lto "
+export FFLAGS="$FFLAGS -fno-lto "
 export CXXFLAGS="$CXXFLAGS -fno-lto "
-%configure --disable-static
+%configure --disable-static --with-init=systemd \
+--with-systemdsystemunitdir=/usr/lib/systemd/system
 make  %{?_smp_mflags}
 
 %check
@@ -86,10 +100,10 @@ export LANG=C.UTF-8
 export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
-make VERBOSE=1 V=1 %{?_smp_mflags} check
+make %{?_smp_mflags} check
 
 %install
-export SOURCE_DATE_EPOCH=1579731225
+export SOURCE_DATE_EPOCH=1644104196
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/keepalived
 cp %{_builddir}/keepalived-2.0.20/COPYING %{buildroot}/usr/share/package-licenses/keepalived/4cc77b90af91e615a64ae04893fdffa7939db84c
@@ -120,3 +134,7 @@ cp %{_builddir}/keepalived-2.0.20/genhash/COPYING %{buildroot}/usr/share/package
 /usr/share/man/man1/genhash.1
 /usr/share/man/man5/keepalived.conf.5
 /usr/share/man/man8/keepalived.8
+
+%files services
+%defattr(-,root,root,-)
+/usr/lib/systemd/system/keepalived.service
